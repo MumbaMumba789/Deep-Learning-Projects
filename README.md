@@ -92,10 +92,11 @@ After training has produced `books_bags_model.pth`, run:
 python webcam.py
 ```
 
-A webcam preview opens. Press **Space** to classify the current frame; the
-predicted class and confidence are printed in the terminal. Press **Q** to
-close the preview. If the webcam cannot be opened, check that it is connected,
-not in use by another application, and available to your operating system.
+A webcam preview opens and continuously classifies the live video. A large
+label (**BAG** or **BOOK**) and the model's confidence appear over the video.
+Press **Q** to close the preview. If the webcam cannot be opened, check that it
+is connected, not in use by another application, and available to your
+operating system.
 
 ## Other scripts
 

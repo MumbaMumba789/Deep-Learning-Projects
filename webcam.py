@@ -43,35 +43,49 @@ while True:
         print("Could not access webcam.")
         break
 
-    cv2.imshow("Books vs Bags - Press SPACE to classify", frame)
+    image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    image = Image.fromarray(image)
+    image_tensor = transform(image).unsqueeze(0).to(device)
+
+    with torch.inference_mode():
+        prediction = model(image_tensor)
+        probabilities = torch.softmax(prediction, dim=1)
+        confidence, predicted_class = torch.max(probabilities, dim=1)
+
+    label = class_names[predicted_class.item()].rstrip("s").upper()
+    confidence_score = confidence.item() * 100
+    display_text = f"{label}  {confidence_score:.1f}%"
+
+    font = cv2.FONT_HERSHEY_SIMPLEX
+    font_scale = 2
+    thickness = 5
+    (text_width, text_height), baseline = cv2.getTextSize(
+        display_text, font, font_scale, thickness
+    )
+    cv2.rectangle(
+        frame,
+        (15, 15),
+        (35 + text_width, 35 + text_height + baseline),
+        (0, 0, 0),
+        cv2.FILLED
+    )
+    cv2.putText(
+        frame,
+        display_text,
+        (25, 25 + text_height),
+        font,
+        font_scale,
+        (255, 255, 255),
+        thickness,
+        cv2.LINE_AA
+    )
+
+    cv2.imshow("Books vs Bags - Live classification", frame)
 
     key = cv2.waitKey(1) & 0xFF
 
     if key == ord("q"):
         break
-
-    elif key == ord(" "):
-        # Convert webcam image to PIL
-        image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        image = Image.fromarray(image)
-
-        # Transform image
-        image_tensor = transform(image).unsqueeze(0).to(device)
-
-        # Prediction
-        with torch.inference_mode():
-            prediction = model(image_tensor)
-            probabilities = torch.softmax(prediction, dim=1)
-
-            confidence, predicted_class = torch.max(
-                probabilities, dim=1
-            )
-
-        label = class_names[predicted_class.item()]
-        confidence_score = confidence.item() * 100
-
-        print(f"Prediction: {label.upper()}")
-        print(f"Confidence: {confidence_score:.2f}%")
 
 camera.release()
 cv2.destroyAllWindows()
