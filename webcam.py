@@ -36,6 +36,9 @@ camera = cv2.VideoCapture(0)
 print("Press SPACE to capture an image.")
 print("Press Q to quit.")
 
+result_text = None
+result_confidence = None
+
 while True:
     success, frame = camera.read()
 
@@ -43,49 +46,98 @@ while True:
         print("Could not access webcam.")
         break
 
-    image = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    image = Image.fromarray(image)
-    image_tensor = transform(image).unsqueeze(0).to(device)
-
-    with torch.inference_mode():
-        prediction = model(image_tensor)
-        probabilities = torch.softmax(prediction, dim=1)
-        confidence, predicted_class = torch.max(probabilities, dim=1)
-
-    label = class_names[predicted_class.item()].rstrip("s").upper()
-    confidence_score = confidence.item() * 100
-    display_text = f"{label}  {confidence_score:.1f}%"
-
+    capture_frame = frame.copy()
     font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 2
-    thickness = 5
-    (text_width, text_height), baseline = cv2.getTextSize(
-        display_text, font, font_scale, thickness
+    prompt = "SHOW ME A BOOK OR A BAG  |  SPACE: CAPTURE"
+    prompt_scale = min(0.9, (frame.shape[1] - 30) / max(
+        cv2.getTextSize(prompt, font, 0.9, 2)[0][0], 1
+    ) * 0.9)
+    (prompt_width, prompt_height), prompt_baseline = cv2.getTextSize(
+        prompt, font, prompt_scale, 2
     )
     cv2.rectangle(
         frame,
-        (15, 15),
-        (35 + text_width, 35 + text_height + baseline),
+        (0, 0),
+        (frame.shape[1], prompt_height + prompt_baseline + 30),
         (0, 0, 0),
         cv2.FILLED
     )
     cv2.putText(
         frame,
-        display_text,
-        (25, 25 + text_height),
+        prompt,
+        ((frame.shape[1] - prompt_width) // 2, prompt_height + 15),
         font,
-        font_scale,
+        prompt_scale,
         (255, 255, 255),
-        thickness,
+        2,
         cv2.LINE_AA
     )
 
-    cv2.imshow("Books vs Bags - Live classification", frame)
+    if result_text is not None:
+        result_scale = 1.8
+        result_thickness = 5
+        result_size = cv2.getTextSize(
+            result_text, font, result_scale, result_thickness
+        )[0]
+        result_scale = min(
+            result_scale,
+            (frame.shape[1] - 40) / max(result_size[0], 1) * result_scale
+        )
+        (result_width, result_height), result_baseline = cv2.getTextSize(
+            result_text, font, result_scale, result_thickness
+        )
+        result_y = (frame.shape[0] + result_height) // 2
+        cv2.rectangle(
+            frame,
+            (0, result_y - result_height - 25),
+            (frame.shape[1], result_y + result_baseline + 25),
+            (0, 0, 0),
+            cv2.FILLED
+        )
+        cv2.putText(
+            frame,
+            result_text,
+            ((frame.shape[1] - result_width) // 2, result_y),
+            font,
+            result_scale,
+            (0, 255, 0),
+            result_thickness,
+            cv2.LINE_AA
+        )
+        confidence_text = f"Confidence: {result_confidence:.1f}%"
+        confidence_size = cv2.getTextSize(
+            confidence_text, font, 0.7, 2
+        )[0]
+        cv2.putText(
+            frame,
+            confidence_text,
+            ((frame.shape[1] - confidence_size[0]) // 2, result_y + 45),
+            font,
+            0.7,
+            (255, 255, 255),
+            2,
+            cv2.LINE_AA
+        )
+
+    cv2.imshow("Books vs Bags - Press SPACE to capture", frame)
 
     key = cv2.waitKey(1) & 0xFF
 
     if key == ord("q"):
         break
+    if key == ord(" "):
+        image = cv2.cvtColor(capture_frame, cv2.COLOR_BGR2RGB)
+        image = Image.fromarray(image)
+        image_tensor = transform(image).unsqueeze(0).to(device)
+
+        with torch.inference_mode():
+            prediction = model(image_tensor)
+            probabilities = torch.softmax(prediction, dim=1)
+            confidence, predicted_class = torch.max(probabilities, dim=1)
+
+        label = class_names[predicted_class.item()].rstrip("s").upper()
+        result_text = f"IT IS A {label}"
+        result_confidence = confidence.item() * 100
 
 camera.release()
 cv2.destroyAllWindows()
