@@ -1,5 +1,33 @@
-/data/
-/raw/
-/runs/
+# ---- Python ----
 __pycache__/
 *.py[cod]
+*.egg-info/
+.ipynb_checkpoints/
+
+# ---- Virtual environments ----
+.venv/
+venv/
+env/
+
+# ---- Datasets (download / regenerate locally) ----
+data/
+raw/
+*.zip
+Word2VEc/data/
+
+# ---- Model checkpoints / weights ----
+*.pt
+*.pth
+*.ckpt
+*.bin
+*.safetensors
+
+# ---- Training logs ----
+runs/
+*.tfevents.*
+
+# ---- Editors / OS ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
